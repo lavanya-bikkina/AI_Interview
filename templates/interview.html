@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Technical Interview with Real-Time Video & Audio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+
+        video {
+            width: 60%;
+            border: 2px solid black;
+        }
+
+        #timer {
+            font-size: 20px;
+            margin: 10px;
+        }
+    </style>
+</head>
+
+<body class="bg-gradient-to-r from-green-400 to-blue-600 text-white min-h-screen flex flex-col items-center justify-center p-6">
+
+    <div class="max-w-lg w-full bg-white text-gray-900 shadow-2xl rounded-2xl p-10 text-center transform transition-all hover:scale-105 hover:shadow-3xl">
+        <h1 class="text-4xl font-extrabold mb-4 text-gray-800">Technical Interview</h1>
+        <p class="text-xl font-semibold text-red-600 mb-6">Time left: <span id="timer">60</span> seconds</p>
+
+        <p class="text-lg font-medium text-gray-700 mb-4" id="questionText">{{ question['Question'] }}</p>
+        <div class="flex justify-center items-center my-4">
+            <video id="video" autoplay class="w-3/4 md:w-1/2 border-2 border-black rounded-lg shadow-lg"></video>
+        </div>
+        
+
+        <form id="answerForm" method="POST" class="space-y-4">
+            <input type="text" name="user_answer" id="user_answer" placeholder="Your answer..." required
+                class="w-full p-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 text-lg">
+            <input type="hidden" name="question_index" value="{{ question_index }}">
+
+            <div class="flex justify-between">
+                <button type="submit"
+                    class="px-6 py-3 bg-gradient-to-r from-green-500 to-blue-600 text-white rounded-lg shadow-md transition-all transform hover:scale-110 hover:from-green-600 hover:to-blue-700 text-lg font-semibold">
+                    Submit Answer
+                </button>
+                <button type="button" id="skipButton"
+                    class="px-6 py-3 bg-red-500 text-white rounded-lg shadow-md transition-all transform hover:scale-110 hover:bg-red-700 text-lg font-semibold">
+                    Skip Question
+                </button>
+            </div>
+        </form>
+
+        <div class="text-lg font-semibold text-gray-800 mt-4" id="result"></div>
+        <div class="text-lg font-semibold text-gray-700 mt-2" id="similarity"></div>
+    </div>
+
+    <script>
+        let mediaStream;
+        let startTime, interval;
+        let timer = 60;
+        let elapsedTime = 0;
+        const timerElement = document.getElementById("timer");
+        const recordingTimerElement = document.getElementById("recordingTimer");
+        const answerForm = document.getElementById("answerForm");
+        const resultElement = document.getElementById("result");
+        const similarityElement = document.getElementById("similarity");
+
+        // Video and Audio Access
+        navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+            .then(stream => {
+                mediaStream = stream;
+                document.getElementById("video").srcObject = stream;
+
+                // Start recording when the question is displayed
+                startRecording();
+            })
+            .catch(error => console.error('Error accessing media devices.', error));
+
+        // Speech Recognition Setup
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+
+        recognition.onresult = event => {
+            let transcript = '';
+
+            for (let i = 0; i < event.results.length; i++) {
+                transcript += event.results[i][0].transcript + ' ';
+            }
+            
+            document.getElementById('user_answer').value = transcript;
+             // Display converted text as user answer
+            
+        };
+
+        // Timer for question
+        let intervalQuestionTimer = setInterval(function () {
+            if (timer > 0) {
+                timer--;
+                timerElement.textContent = timer;
+            } else {
+                clearInterval(intervalQuestionTimer);
+                // Automatically submit when time runs out
+                stopRecording();
+                submitAnswer();
+                
+            }
+        }, 1000);
+
+        // Start recording function
+        function startRecording() {
+            recognition.start();
+            startTime = Date.now();
+            interval = setInterval(() => {
+                elapsedTime = Math.floor((Date.now() - startTime) / 1000);
+                //recordingTimerElement.textContent = Recording Time: ${elapsedTime}s;
+            }, 1000);
+        }
+
+        // Stop recording function
+        function stopRecording() {
+            recognition.stop();
+            clearInterval(interval);
+        }
+
+        answerForm.addEventListener('submit', function (event) {
+            event.preventDefault();
+            stopRecording();
+            submitAnswer();
+            
+        });
+
+        function submitAnswer() {
+            startRecording()
+            
+            const formData = new FormData(answerForm);
+
+            fetch('/submit_answer', {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert("Error: " + data.error);
+                    } else {
+                        resultElement.textContent = data.result;
+                        similarityElement.textContent = "Similarity Score: " + data.similarity;
+
+                        document.getElementById("user_answer").value = "";
+
+                        if (data.finished) {
+                            const averageSimilarityScore = data.total_similarity_score / data.total_questions;
+                            window.location.href = '/show_scores?final_score=${data.score}&average_similarity_score=${averageSimilarityScore.toFixed(2)}';
+                            return;
+                        } else {
+                            document.querySelector(".text-lg.font-medium").textContent = data.next_question;
+                            document.querySelector("input[name='question_index']").value = data.question_index;
+                            
+
+                        
+                            timer = data.timer;
+                            timerElement.textContent = timer;
+
+                            clearInterval(intervalQuestionTimer);
+                            intervalQuestionTimer = setInterval(function () {
+                                if (timer > 0) {
+                                    timer--;
+                                    timerElement.textContent = timer;
+                                } else {
+                                    clearInterval(intervalQuestionTimer);
+                                     // Stop recording when time runs out
+                                    stopRecording();
+                                    submitAnswer();
+                                    
+                                }
+                            }, 1000);
+                        }
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+                
+        }
+
+        document.getElementById("skipButton").addEventListener('click', function () {
+            
+            const formData = new FormData(answerForm);
+            formData.delete("user_answer");
+
+            fetch('/submit_answer', {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert("Error: " + data.error);
+                    } else {
+                        resultElement.textContent = "Skipped";
+                        similarityElement.textContent = "Similarity Score: 0";
+                        document.getElementById("user_answer").value = "";
+
+                        if (data.finished) {
+                            const averageSimilarityScore = data.total_similarity_score / data.total_questions;
+                            window.location.href = '/show_scores?final_score=${data.score}&average_similarity_score=${averageSimilarityScore.toFixed(2)}';
+                        } else {
+                            
+                            document.querySelector(".text-lg.font-medium").textContent = data.next_question;
+                            document.querySelector("input[name='question_index']").value = data.question_index;
+                            
+                            timer = data.timer;
+                            timerElement.textContent = timer;
+                            clearInterval(intervalQuestionTimer);
+                            intervalQuestionTimer = setInterval(function () {
+                                if (timer > 0) {
+                                    timer--;
+                                    timerElement.textContent = timer;
+                                } else {
+                                    clearInterval(intervalQuestionTimer);
+                                    stopRecording();
+                                    submitAnswer();
+                                }
+                            }, 1000);
+                        }
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        });
+        stopRecording();
+    </script>
+
+</body>
+
+</html>

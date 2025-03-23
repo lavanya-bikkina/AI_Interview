@@ -1,0 +1,9 @@
+flask
+pandas
+sentence-transformers
+scikit-learn
+google-generativeai
+numpy
+os-sys
+regex
+gunicorn  # For deployment (optional)

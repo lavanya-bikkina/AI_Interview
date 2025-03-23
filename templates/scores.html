@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interview Results</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-r from-blue-500 to-purple-600 text-gray-900 min-h-screen flex items-center justify-center p-6">
+    <div class="max-w-3xl w-full p-8 bg-white shadow-2xl rounded-2xl transform transition-all hover:scale-105 hover:shadow-3xl">
+        <h1 class="text-4xl font-extrabold text-center text-gray-800 mb-6">Interview Results</h1>
+        
+        <div class="text-lg text-center mb-6">
+            <p class="mb-2">Final Score: <span class="font-bold text-blue-600 text-2xl">{{ final_score }} / 5</span></p>
+            <p>Accuarcy: <span class="font-bold text-blue-600 text-2xl">{{ average_similarity_score }}</span></p>
+        </div>
+        
+        <h2 class="text-2xl font-semibold text-gray-700 border-b-4 border-blue-500 pb-3 mb-6">Your Responses</h2>
+        <div class="space-y-6">
+            {% for qa in user_answers %}
+                <div class="p-6 border-l-8 border-blue-500 shadow-md bg-gray-50 rounded-lg hover:shadow-lg transition-all transform hover:scale-105">
+                    <p class="font-bold text-gray-700 text-lg">Question {{ loop.index }}:</p>
+                    <p class="text-black-600 italic text-xl">"{{ qa.question }}"</p>
+                    <p class="font-bold text-gray-700 mt-3 text-lg">Your Answer:</p>
+                    <p class="text-blue-600 text-lg">{{ qa.user_answer }}</p>
+                    <p class="font-bold text-gray-700 mt-3 text-lg">Correct Answer:</p>
+                    <p class="text-green-600 text-lg">{{ qa.correct_answer }}</p>
+                </div>
+            {% endfor %}
+        </div>
+
+        <div class="text-center mt-8">
+            <a href="/" class="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg shadow-md transition-all transform hover:scale-110 hover:from-blue-600 hover:to-purple-700 text-xl font-semibold">Go Home</a>
+        </div>
+    </div>
+</body>
+</html>
