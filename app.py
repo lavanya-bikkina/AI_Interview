@@ -11,7 +11,7 @@ import google.generativeai as genai
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 # Set up Gemini API key
-genai.configure(api_key="AIzaSyB3HIjD_woN8QqELSdUl2bhNVfQvTZY9ec")
+genai.configure(api_key="AIzaSyBJGwt8Vwr4nU0rcAnopelqibbPmSO5IlU")
 
 def get_gemini_model():
     return genai.GenerativeModel("gemini-1.5-pro")
@@ -24,7 +24,7 @@ QUESTION_TIMER = 60
 
 # Global variables for tracking score and progress
 score = 0
-total_questions = 5
+total_questions = 10
 questions = []
 current_question_index = 0
 total_similarity_score = 0
